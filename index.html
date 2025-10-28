@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+
+
+// MetaMask
+document.getElementById('connect-wallet').addEventListener('click', connectWallet);
+async function connectWallet(){
+if (typeof window.ethereum === 'undefined') {
+showNotification('Please install MetaMask!', 'warning');
+window.open('https://metamask.io/download/', '_blank');
+return;
+}
+try {
+const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+web3 = new Web3(window.ethereum);
+state.wallet.connected = true; state.wallet.address = accounts[0];
+const balanceWei = await web3.eth.getBalance(accounts[0]);
+state.wallet.balance = web3.utils.fromWei(balanceWei,'ether');
+document.getElementById('wallet-address').textContent = formatAddress(state.wallet.address);
+document.getElementById('wallet-balance').textContent = `${parseFloat(state.wallet.balance).toFixed(4)} ETH`;
+const btn = document.getElementById('connect-wallet');
+btn.textContent = '✅ Connected';
+btn.style.background = 'linear-gradient(135deg, var(--success), #059669)';
+showNotification('MetaMask connected successfully! 🦊', 'success');
+persist();
+ethereum.removeListener?.('accountsChanged', handleAccountsChanged);
+ethereum.on('accountsChanged', handleAccountsChanged);
+} catch (err) {
+console.error('MetaMask error', err);
+showNotification('Failed to connect MetaMask', 'error');
+}
+}
+function handleAccountsChanged(accounts){
+if (accounts.length === 0) {
+state.wallet.connected = false; state.wallet.address = null; state.wallet.balance = 0;
+document.getElementById('wallet-address').textContent = 'Not Connected';
+document.getElementById('wallet-balance').textContent = '0.0000 ETH';
+const btn = document.getElementById('connect-wallet');
+btn.textContent = '🦊 Connect MetaMask'; btn.style.background = '';
+showNotification('MetaMask disconnected', 'warning');
+persist();
+} else {
+connectWallet();
+}
+}
+
+
+// Visibility: pause scheduled updates when hidden
+let intervalId;
+function startInterval(){
+clearInterval(intervalId);
+intervalId = setInterval(updateAll, CONFIG.updateInterval);
+}
+document.addEventListener('visibilitychange', debounce(()=>{
+if (document.hidden) {
+clearInterval(intervalId);
+} else {
+updateAll();
+startInterval();
+}
+}, 120));
+
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+console.log('🚀 HOGEII ULTIMATE v2.1 initialized');
+initChart();
+updateAll();
+startInterval();
+setTimeout(()=>showNotification('Welcome to HOGEII ULTIMATE! 🚀','success'), 800);
+// Restore wallet UI if cached
+if (state.wallet.connected && state.wallet.address) {
+document.getElementById('wallet-address').textContent = formatAddress(state.wallet.address);
+document.getElementById('wallet-balance').textContent = `${parseFloat(state.wallet
